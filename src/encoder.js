@@ -1,4 +1,4 @@
-import Decoder from './decode';
+import Decoder from './decoder';
 
 export function getCanvasEl(width, height) {
   const c = document.createElement('canvas');
@@ -43,15 +43,15 @@ export default class Encoder {
       if (codecParams.pixelThreshold) this.pixelThreshold = codecParams.pixelThreshold;
       if (codecParams.tileSize) this.tileSize = codecParams.tileSize;
       if (codecParams.diffThreshold) this.diffThreshold = codecParams.diffThreshold;
-      if (codecParams.w) {
-        this.w = codecParams.w;
-        if (!codecParams.h) this.h = Math.floor(this.w * 3 / 4);
-        else this.h = codecParams.h;
-        if (this.w % this.tileSize + this.h % this.tileSize > 0) {
-          throw new Error('Unsupported frame size');
-        }
-        this.numOfTiles = this.w / this.tileSize * (this.h / this.tileSize);
+      if (codecParams.width) {
+        this.w = codecParams.width;
+        if (!codecParams.height) this.h = Math.floor(this.w * 3 / 4);
+        else this.h = codecParams.height;
       }
+      if (this.w % this.tileSize + this.h % this.tileSize > 0) {
+        throw new Error('Unsupported frame or tile size');
+      }
+      this.numOfTiles = this.w / this.tileSize * (this.h / this.tileSize);
     }
     this.vidW = src.width;
     this.vidH = src.height;

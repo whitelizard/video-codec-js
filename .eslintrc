@@ -1,0 +1,25 @@
+{
+  "parser": "babel-eslint",
+  "extends": "airbnb-base",
+
+  "globals": {
+    "fetch": true,
+    "document": true,
+    "HTMLCanvasElement": true,
+    "HTMLVideoElement": true,
+    "Image": true
+  },
+
+  "rules": {
+    "no-restricted-syntax": [0],
+    "no-mixed-operators": [0],
+    "arrow-parens": [2, "as-needed"],
+    "no-confusing-arrow": [0]
+  },
+
+  "parserOptions": {
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true
+    }
+  },
+}
