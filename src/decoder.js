@@ -7,18 +7,16 @@ export default class Decoder {
   h;
 
   constructor(dest, destCtx) {
-    console.log('Decoder constructor', dest);
     if (dest instanceof HTMLCanvasElement) {
       this.canvas = dest;
       if (destCtx) this.ctx = destCtx;
       else this.ctx = this.canvas.getContext('2d');
       this.w = dest.width;
       this.h = dest.height;
-      // img = new Image(); // TODO: Test strategy of hreusing same image object
+      // img = new Image(); // TODO: Test strategy of reusing same image object
     } else if (dest instanceof HTMLImageElement) {
       this.img = dest;
     } else throw new Error('Supported element not provided to decoder');
-    // if (tileSize) this.tileSize = tileSize;
   }
 
   plotTile(image, x, y) {

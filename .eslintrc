@@ -7,6 +7,7 @@
     "document": true,
     "HTMLCanvasElement": true,
     "HTMLVideoElement": true,
+    "HTMLImageElement": true,
     "Image": true
   },
 

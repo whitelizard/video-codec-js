@@ -1,7 +1,9 @@
 # video-codec-js
 Javascript video codec for the browser.
 
-Encodes from a video or canvas element into either a string (key frame) or an array (tiles). These can then be put in your favorite protocol and sent over a Websocket for instance, for real-time video streaming.
+Encodes from a video or canvas element into either a string (key frame) or an array (tiles). These can then be put in your favorite protocol and sent over a Websocket connection for instance, for real-time video streaming.
+
+The Decoder decodes the string/array to display the result in a canvas element.
 
 ```javascript
 import Encoder from 'video-codec-js/lib/encoder';
