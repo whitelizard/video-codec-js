@@ -8,7 +8,9 @@
     "HTMLCanvasElement": true,
     "HTMLVideoElement": true,
     "HTMLImageElement": true,
-    "Image": true
+    "Image": true,
+    "navigator": true,
+    "window": true
   },
 
   "rules": {

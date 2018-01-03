@@ -9,8 +9,7 @@ export default class Decoder {
   constructor(dest, destCtx) {
     if (dest instanceof HTMLCanvasElement) {
       this.canvas = dest;
-      if (destCtx) this.ctx = destCtx;
-      else this.ctx = this.canvas.getContext('2d');
+      this.ctx = destCtx || this.canvas.getContext('2d');
       this.w = dest.width;
       this.h = dest.height;
       // img = new Image(); // TODO: Test strategy of reusing same image object
