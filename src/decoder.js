@@ -18,9 +18,17 @@ export default class Decoder {
     } else throw new Error('Supported element not provided to decoder');
   }
 
-  plotTile(image, x, y) {
+  plotTiles(image, data) {
     const t = this.tileSize;
-    this.ctx.drawImage(image, 0, 0, t, t, x, y, t, t);
+    const len = data.length;
+    for (let i = 4; i < len; i += 1) {
+      const id = data[i];
+      const tx = Math.floor(id / 1000);
+      const ty = id % 1000;
+      const x = tx * this.tileSize;
+      const y = ty * this.tileSize;
+      this.ctx.drawImage(image, t * i, 0, t * (i + 1), t, x, y, t, t);
+    }
   }
 
   onKeyFrame(image) {
@@ -32,26 +40,22 @@ export default class Decoder {
   }
 
   decode(data) {
-    if (typeof data === 'string') {
+    if (data[2] === 0) {
+      // keyframe
       if (this.img) {
         this.img.onload = this.onKeyFrame.bind(this, this.img);
-        this.img.src = data;
+        this.img.src = data[1];
       } else {
         const image = new Image();
         image.onload = this.onKeyFrame.bind(this, image);
-        image.src = data;
+        image.src = data[1];
       }
     } else {
       if (!this.w) return undefined;
-      if (!this.tileSize) this.tileSize = data[data.length - 1];
-      const len = data.length;
-      for (let i = 0; i < len; i += 3) {
-        const x = data[i] * this.tileSize;
-        const y = data[i + 1] * this.tileSize;
-        const image = new Image();
-        image.onload = this.plotTile.bind(this, image, x, y);
-        image.src = data[i + 2];
-      }
+      if (!this.tileSize) this.tileSize = data[2];
+      const image = new Image();
+      image.onload = this.plotTiles.bind(this, image, data);
+      image.src = data[1];
     }
     return undefined;
   }

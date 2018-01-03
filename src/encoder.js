@@ -2,6 +2,8 @@ import Decoder from './decoder';
 import { getCanvas } from './utils';
 // import * as camera from './camera';
 
+const version = 1;
+
 export default class Encoder {
   tileSize = 16;
   w = 640;
@@ -14,16 +16,11 @@ export default class Encoder {
   pixelThreshold = 3;
   diffThreshold = 20;
 
-  // srcVideo;
-  // srcCanvas;
-  // srcCtx;
   resultCanvas;
   rctx;
   tileCanvas;
   tctx;
 
-  // vidW;
-  // vidH;
   timer;
   keyInstead = true;
   decoder;
@@ -66,7 +63,7 @@ export default class Encoder {
     // throw new Error('First argument not of type HTMLCanvasElement or HTMLVideoElement');
     this.resultCanvas = rCanvas || getCanvas(this.w, this.h);
     this.rctx = rContext || this.resultCanvas.getContext('2d');
-    this.tileCanvas = getCanvas(this.tileSize, this.tileSize, true);
+    this.tileCanvas = getCanvas(this.tileSize * this.numOfTiles, this.tileSize, true);
     this.tctx = this.tileCanvas.getContext('2d');
     this.decoder = new Decoder(this.resultCanvas, this.rctx);
   }
@@ -87,58 +84,72 @@ export default class Encoder {
         const delta = Math.abs(a1 - a2);
         if (delta > this.diffThreshold) {
           // d[i] = 255;
-          const mx = Math.floor(x / this.tileSize);
-          const my = Math.floor(y / this.tileSize);
-          const k = mx * 100 + my;
+          const tx = Math.floor(x / this.tileSize);
+          const ty = Math.floor(y / this.tileSize);
+          const k = tx * 1000 + ty;
           if (!coordMap.has(k)) coordMap.set(k, 1);
           else coordMap.set(k, coordMap.get(k) + 1);
         }
       }
     }
-    return coordMap;
+    const tileIds = [];
+    for (const [k, v] of coordMap) {
+      if (v > this.pixelThreshold) tileIds.push(k);
+    }
+    return tileIds;
   }
 
-  tileStr(x, y, srcCanvas) {
-    const t = this.tileSize;
-    this.tctx.drawImage(srcCanvas, x, y, t, t, 0, 0, t, t);
-    return this.tileCanvas.toDataURL(`image/${this.imgEncoding}`, this.tileQuality);
-  }
+  // tileStr(x, y, srcCanvas) {
+  //   const t = this.tileSize;
+  //   this.tctx.drawImage(srcCanvas, x, y, t, t, 0, 0, t, t);
+  //   return this.tileCanvas.toDataURL(`image/${this.imgEncoding}`, this.tileQuality);
+  // }
 
   keyNext = () => {
     this.keyInstead = true;
   };
+
+  getKeyframe(srcCanvas, data) {
+    // -- Keyframe --
+    this.rctx.putImageData(data, 0, 0);
+    // prevFrameData = data;
+    this.keyInstead = false;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(this.keyNext, this.keyFrameDelay);
+    const str = srcCanvas.toDataURL(`image/${this.imgEncoding}`, this.keyFrameQuality);
+    console.log(str.length, 'KEY');
+    return [version, str, 0];
+  }
 
   encode(srcCanvas, srcCtx) {
     // if (!srcCanvas) {
     //   this.srcCtx.drawImage(this.srcVideo, 0, 0, this.vidW, this.vidH, 0, 0, this.w, this.h);
     // }
     const data = srcCtx.getImageData(0, 0, this.w, this.h);
-    if (this.keyInstead) {
-      // -- Keyframe --
-      this.rctx.putImageData(data, 0, 0);
-      // prevFrameData = data;
-      this.keyInstead = false;
-      if (this.timer) clearTimeout(this.timer);
-      this.timer = setTimeout(this.keyNext, this.keyFrameDelay);
-      const str = srcCanvas.toDataURL(`image/${this.imgEncoding}`, this.keyFrameQuality);
-      console.log(str.length, 'KEY');
-    }
+    if (this.keyInstead) return this.getKeyframe(srcCanvas, data);
     // -- Compressed changes (not keyframe) --
-    const coordMap = this.frameDiff(data, this.rctx.getImageData(0, 0, this.w, this.h));
+    const tileIds = this.frameDiff(data, this.rctx.getImageData(0, 0, this.w, this.h));
+    const len = tileIds.length;
+    if (len > this.numOfTiles * 0.4) return this.getKeyframe(srcCanvas, data);
     // console.log(coordMap);
-    const tiles = [];
-    for (const [k, v] of coordMap) {
-      if (v > this.pixelThreshold) {
-        const mx = Math.floor(k / 100);
-        const my = k % 100;
-        tiles.push(mx);
-        tiles.push(my);
-        tiles.push(this.tileStr(this.tileSize * mx, this.tileSize * my, srcCanvas));
-      }
+    const t = this.tileSize;
+    const payload = [version, undefined, t, 0];
+    const tileCanvas = getCanvas(t * len, t, true);
+    const tctx = tileCanvas.getContext('2d');
+    // for (const id of tileIds) {
+    for (let i = 0; i < len; i += 1) {
+      const id = tileIds[i];
+      const tx = Math.floor(id / 1000);
+      const ty = id % 1000;
+      payload.push(id);
+      tctx.drawImage(srcCanvas, t * tx, t * ty, t, t, t * i, 0, t, t);
+      // payload.push(ty);
+      // payload.push(this.tileStr(this.tileSize * tx, this.tileSize * ty, srcCanvas));
     }
-    tiles.push(this.tileSize);
-    this.decoder.decode(tiles);
-    return tiles;
+    payload[1] = tileCanvas.toDataURL(`image/${this.imgEncoding}`, this.tileQuality);
+    // payload.push(this.tileSize);
+    this.decoder.decode(payload);
+    return payload;
   }
 
   stop() {
