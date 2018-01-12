@@ -35,6 +35,7 @@ export default class App extends Component {
   canvas2;
   timer;
   state = { ticks: 0 };
+
   tick = () => {
     // console.log('tick!', this.encoder);
     if (!this.encoder) return;
@@ -45,35 +46,39 @@ export default class App extends Component {
     this.setState({ ticks: this.state.ticks + 1 });
     // decoder.decode(data);
   };
+
   stop() {
     clearInterval(this.timer);
     camera.stop();
   }
+
   constructor(props) {
     super(props);
     this.fps = 5;
     this.frameDelay = 1000 / this.fps;
   }
+
   componentDidMount() {
     // this.canvas1.width = this.videoEl.width;
     // this.canvas2.width = this.videoEl.width;
     // this.canvas1.height = this.videoEl.height;
     // this.canvas2.height = this.videoEl.height;
     this.ctx1 = this.canvas1.getContext('2d');
-    camera.init(undefined, undefined, undefined, this.canvas1).then(() => {
+    camera.init(320, 240, undefined, this.canvas1).then(() => {
       // console.log(this);
-      this.encoder = new Encoder({}, this.canvas2);
+      this.encoder = new Encoder({ width: 320, height: 240 }, this.canvas2);
       // this.decoder = new Decoder(this.canvas2);
       this.timer = setInterval(this.tick, this.frameDelay);
       // console.log('camera initiated', this.videoEl.autoPlay);
     });
   }
+
   render({}, { ticks }) {
     return (
       <div>
         {/* <video ref={c => (this.videoEl = c)} width="640" height="480" /> */}
-        <canvas ref={c => (this.canvas1 = c)} width="640" height="480" />
-        <canvas ref={c => (this.canvas2 = c)} width="640" height="480" />
+        <canvas ref={c => (this.canvas1 = c)} width="320" height="240" />
+        <canvas ref={c => (this.canvas2 = c)} width="320" height="240" />
         {ticks}
       </div>
     );

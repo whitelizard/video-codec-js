@@ -27,7 +27,9 @@ export default class Decoder {
       const ty = id % 1000;
       const x = tx * this.tileSize;
       const y = ty * this.tileSize;
-      this.ctx.drawImage(image, t * i, 0, t * (i + 1), t, x, y, t, t);
+      // console.log('plotTiles', t * (i - 4), 0, t, t, x, y, t, t);
+      this.ctx.drawImage(image, t * (i - 4), 0, t, t, x, y, t, t);
+      this.ctx.strokeRect(x + 2, y + 2, t - 4, t - 4);
     }
   }
 

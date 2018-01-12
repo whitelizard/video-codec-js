@@ -10,11 +10,12 @@ export default class Encoder {
   h = 480;
   numOfTiles = this.w / this.tileSize * (this.h / this.tileSize);
   keyFrameDelay = 6000;
-  imgEncoding = 'webp';
+  imgEncoding = 'jpeg';
   keyFrameQuality = 0.1;
-  tileQuality = 0.05;
-  pixelThreshold = 3;
+  tileQuality = 0.25;
+  grayscale = false;
   diffThreshold = 20;
+  pixelThreshold = 0.04 * this.tileSize * this.tileSize * (this.grayscale ? 1 : 3);
 
   resultCanvas;
   rctx;
@@ -24,6 +25,7 @@ export default class Encoder {
   timer;
   keyInstead = true;
   decoder;
+  lastKeySize;
 
   constructor(codecParams, rCanvas, rContext) {
     // if (!src) throw new Error('Insufficient argument');
@@ -32,8 +34,15 @@ export default class Encoder {
       if (codecParams.tileQuality) this.tileQuality = codecParams.tileQuality;
       if (codecParams.imgEncoding) this.imgEncoding = codecParams.imgEncoding;
       if (codecParams.keyFrameDelay) this.keyFrameDelay = codecParams.keyFrameDelay;
-      if (codecParams.pixelThreshold) this.pixelThreshold = codecParams.pixelThreshold;
       if (codecParams.tileSize) this.tileSize = codecParams.tileSize;
+      if (codecParams.grayscale) this.grayscale = codecParams.grayscale;
+      if (codecParams.tilePercentThreshold) {
+        this.pixelThreshold =
+          codecParams.tilePercentThreshold *
+          this.tileSize *
+          this.tileSize *
+          (this.grayscale ? 1 : 3);
+      }
       if (codecParams.diffThreshold) this.diffThreshold = codecParams.diffThreshold;
       if (codecParams.width) {
         this.w = codecParams.width;
@@ -79,9 +88,15 @@ export default class Encoder {
     for (let x = 0; x < this.w; x += 1) {
       for (let y = 0; y < this.h; y += 1) {
         const i = (y * this.w + x) * 4;
-        const a1 = 0.2 * d[i] + 0.7 * d[i + 1] + 0.1 * d[i + 2];
-        const a2 = 0.2 * e[i] + 0.7 * e[i + 1] + 0.1 * e[i + 2];
-        const delta = Math.abs(a1 - a2);
+        let delta;
+        if (!this.grayscale) {
+          delta =
+            Math.abs(d[i] - e[i]) + Math.abs(d[i + 1] - e[i + 1]) + Math.abs(d[i + 2] - e[i + 2]);
+        } else {
+          const a1 = 0.2 * d[i] + 0.7 * d[i + 1] + 0.1 * d[i + 2];
+          const a2 = 0.2 * e[i] + 0.7 * e[i + 1] + 0.1 * e[i + 2];
+          delta = Math.abs(a1 - a2);
+        }
         if (delta > this.diffThreshold) {
           // d[i] = 255;
           const tx = Math.floor(x / this.tileSize);
@@ -117,7 +132,8 @@ export default class Encoder {
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(this.keyNext, this.keyFrameDelay);
     const str = srcCanvas.toDataURL(`image/${this.imgEncoding}`, this.keyFrameQuality);
-    console.log(str.length, 'KEY');
+    this.lastKeySize = str.length;
+    console.log(this.lastKeySize, 'KEY');
     return [version, str, 0];
   }
 
@@ -130,21 +146,19 @@ export default class Encoder {
     // -- Compressed changes (not keyframe) --
     const tileIds = this.frameDiff(data, this.rctx.getImageData(0, 0, this.w, this.h));
     const len = tileIds.length;
-    if (len > this.numOfTiles * 0.4) return this.getKeyframe(srcCanvas, data);
+    if (len > this.numOfTiles * 0.2) return this.getKeyframe(srcCanvas, data);
     // console.log(coordMap);
     const t = this.tileSize;
     const payload = [version, undefined, t, 0];
     const tileCanvas = getCanvas(t * len, t, true);
     const tctx = tileCanvas.getContext('2d');
-    // for (const id of tileIds) {
     for (let i = 0; i < len; i += 1) {
       const id = tileIds[i];
       const tx = Math.floor(id / 1000);
       const ty = id % 1000;
       payload.push(id);
+      // console.log('encode tile', t * tx, t * ty, t, t, t * i, 0, t, t);
       tctx.drawImage(srcCanvas, t * tx, t * ty, t, t, t * i, 0, t, t);
-      // payload.push(ty);
-      // payload.push(this.tileStr(this.tileSize * tx, this.tileSize * ty, srcCanvas));
     }
     payload[1] = tileCanvas.toDataURL(`image/${this.imgEncoding}`, this.tileQuality);
     // payload.push(this.tileSize);
